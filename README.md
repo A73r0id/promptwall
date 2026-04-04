@@ -230,11 +230,11 @@ run_eval.py                  precision/recall/F1 evaluation
 - [x] Output scanner
 - [x] CLI (scan, session, eval commands)
 - [x] Benchmark dataset (102 labeled prompts)
-- [ ] FastAPI middleware
-- [ ] LangChain integration
-- [ ] pip package release
-- [ ] HuggingFace dataset release
-- [ ] arXiv preprint
+- [x] FastAPI middleware
+- [x] LangChain integration
+- [x] pip package release
+- [x] HuggingFace dataset release
+- [x] arXiv preprint
 
 ---
 
