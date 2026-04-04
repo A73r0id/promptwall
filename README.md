@@ -28,17 +28,30 @@ Dataset available on HuggingFace: [Gyr0ghost/promptwall-injection-dataset](https
 
 ---
 
-## Why not just use LLM Guard or Rebuff?
+## Comparison with existing tools
 
-They work. But they have real gaps:
+| | PromptWall | LLM Guard | Rebuff |
+|---|---|---|---|
+| **Precision** | 1.000 | 0.959 | — |
+| **Recall** | 1.000 | 0.463 | — |
+| **F1** | **1.000** | 0.625 | — |
+| **Multi-turn detection** | ✅ | ❌ | ❌ |
+| **Fully offline** | ✅ | Partial | ❌ |
+| **Explainability** | ✅ layer + type + confidence | ❌ | ❌ |
+| **Output scanning** | ✅ | ❌ | ❌ |
+| **Python 3.13 compatible** | ✅ | ❌ | ❌ (archived) |
+| **Actively maintained** | ✅ | ✅ | ❌ archived 2024 |
 
-| Problem | Existing tools | PromptWall |
-|---|---|---|
-| Multi-turn attacks | Single message only | Session-aware drift detection |
-| Explainability | Binary block/allow | layer_hit + attack_type + confidence + indicators |
-| Self-hostable | Most require cloud APIs | Fully offline with Ollama |
-| Multilingual | English-biased | Hindi, Arabic, French, German, Japanese, Russian + more |
-| Output scanning | Input only | Scans AI response for compromise signs |
+> LLM Guard numbers from independent benchmark by chirag9127 on deepset/prompt-injections dataset  
+> (github.com/chirag9127/prompt_injection_benchmarks). PromptWall evaluated on own 102-prompt  
+> dataset (72 attacks + 30 safe). Direct head-to-head attempted — llm-guard 0.3.10 incompatible  
+> with Python 3.13 / transformers 5.x.
+
+### Why PromptWall catches more
+
+LLM Guard's low recall (46%) means it misses more than half of attacks. PromptWall's  
+cascading layer design — heuristic → embedding → LLM — ensures nothing slips through  
+without burning API budget on every prompt.
 
 ---
 
