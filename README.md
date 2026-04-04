@@ -69,6 +69,8 @@ They work. But they have real gaps:
 ---
 
 ## Install
+[![PyPI version](https://badge.fury.io/py/promptwall.svg)](https://pypi.org/project/promptwall/)
+
 ```bash
 pip install promptwall
 

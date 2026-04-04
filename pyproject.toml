@@ -1,39 +1,61 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "promptwall"
 version = "0.1.0"
-description = "LLM prompt injection firewall with explainability and session tracking"
+authors = [     {name = "A73r0id", email = "choubeyhimanshu719@email.com"} ]
+description = "LLM prompt injection firewall with session tracking, explainability and multilingual detection"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
-keywords = ["llm", "security", "prompt-injection", "ai-safety", "firewall"]
+keywords = ["llm", "security", "prompt-injection", "ai-safety", "firewall", "jailbreak", "cybersecurity"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
 ]
 
 dependencies = [
     "requests>=2.31",
 ]
 
-[project.scripts]
-promptwall = "promptwall.cli.main:main"
-
 [project.optional-dependencies]
 openai     = ["openai>=1.0"]
 anthropic  = ["anthropic>=0.20"]
 embedding  = ["sentence-transformers>=2.2", "numpy>=1.24"]
-all        = ["openai>=1.0", "anthropic>=0.20", "sentence-transformers>=2.2", "numpy>=1.24"]
+fastapi    = ["fastapi>=0.100", "uvicorn>=0.23", "starlette>=0.27"]
+langchain  = ["langchain>=0.1"]
+all        = [
+    "openai>=1.0",
+    "anthropic>=0.20",
+    "sentence-transformers>=2.2",
+    "numpy>=1.24",
+    "fastapi>=0.100",
+    "uvicorn>=0.23",
+    "starlette>=0.27",
+]
+
+[project.scripts]
+promptwall = "promptwall.cli.main:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/promptwall"
-Issues   = "https://github.com/yourusername/promptwall/issues"
+Homepage    = "https://github.com/A73r0id/promptwall"
+Dataset     = "https://huggingface.co/datasets/Gyr0ghost/promptwall-injection-dataset"
+Issues      = "https://github.com/A73r0id/promptwall/issues"
+"Bug Tracker" = "https://github.com/A73r0id/promptwall/issues"
 
 [tool.setuptools.packages.find]
-where = ["."]
+where   = ["."]
 include = ["promptwall*"]
+
+[tool.setuptools.package-data]
+promptwall = ["data/*.jsonl"]
