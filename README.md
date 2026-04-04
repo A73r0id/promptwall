@@ -24,7 +24,7 @@ Layer breakdown on full benchmark:
 - L2 embedding caught 46 attacks (~20ms each, no API cost)
 - L3 LLM caught 0 — not needed on this dataset
 
-  Dataset available on HuggingFace: [Gyr0ghost/promptwall-injection-dataset](https://huggingface.co/datasets/Gyr0ghost/promptwall-injection-dataset)
+Dataset available on HuggingFace: [Gyr0ghost/promptwall-injection-dataset](https://huggingface.co/datasets/Gyr0ghost/promptwall-injection-dataset)
 
 ---
 
