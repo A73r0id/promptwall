@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "promptwall"
+version = "0.1.0"
+description = "LLM prompt injection firewall with explainability and session tracking"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+keywords = ["llm", "security", "prompt-injection", "ai-safety", "firewall"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Security",
+    "Programming Language :: Python :: 3.10",
+]
+
+dependencies = [
+    "requests>=2.31",
+]
+
+[project.scripts]
+promptwall = "promptwall.cli.main:main"
+
+[project.optional-dependencies]
+openai     = ["openai>=1.0"]
+anthropic  = ["anthropic>=0.20"]
+embedding  = ["sentence-transformers>=2.2", "numpy>=1.24"]
+all        = ["openai>=1.0", "anthropic>=0.20", "sentence-transformers>=2.2", "numpy>=1.24"]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/promptwall"
+Issues   = "https://github.com/yourusername/promptwall/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["promptwall*"]
