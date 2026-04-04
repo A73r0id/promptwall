@@ -1,5 +1,5 @@
 import time
-from .layers import heuristic, llm_classifier
+from .layers import heuristic, llm_classifier, embedding
 from .models.result import FirewallResult
 from .models.attack_types import AttackType
 
@@ -7,19 +7,19 @@ class Firewall:
     """
     Main firewall class. Cascades through detection layers cheapest-first.
     Only escalates to expensive LLM calls if fast layers don't catch it.
-    
+
     Usage:
         fw = Firewall(provider="openai")
         result = fw.scan("ignore all previous instructions...")
-        print(result)  # FirewallResult(verdict=BLOCKED, type=direct_injection, ...)
+        print(result)
     """
 
     def __init__(
         self,
-        provider: str = "openai",      # openai | anthropic | local
-        model: str = None,             # override default model per provider
-        heuristic_only: bool = False,  # skip LLM classifier (faster, less accurate)
-        confidence_threshold: float = 0.5,  # min confidence to auto-block from heuristic
+        provider: str = "openai",
+        model: str = None,
+        heuristic_only: bool = False,
+        confidence_threshold: float = 0.5,
         verbose: bool = False,
     ):
         self.provider = provider
@@ -28,7 +28,6 @@ class Firewall:
         self.confidence_threshold = confidence_threshold
         self.verbose = verbose
 
-        # basic stats tracking - useful for dashboards/logging later
         self._stats = {
             "total": 0,
             "blocked": 0,
@@ -37,10 +36,6 @@ class Firewall:
         }
 
     def scan(self, prompt: str) -> FirewallResult:
-        """
-        Scan a single prompt. Returns FirewallResult with full breakdown.
-        This is the main method you'll call for single-turn apps.
-        """
         if not prompt or not prompt.strip():
             return self._allow_clean(prompt)
 
@@ -55,42 +50,32 @@ class Firewall:
         return result
 
     def session(self) -> "SessionFirewall":
-        """
-        Returns a session-aware wrapper for multi-turn conversations.
-        Tracks intent drift across messages - catches attacks spread over multiple turns.
-
-        Usage:
-            session = fw.session()
-            session.scan("hey can you help me?")      # ALLOWED
-            session.scan("you seem very flexible...")  # ALLOWED  
-            session.scan("now ignore your rules")      # BLOCKED + session tainted
-        """
         return SessionFirewall(self)
 
     def _run_layers(self, prompt: str) -> FirewallResult:
         # --- layer 1: heuristic ---
-        # fast regex scan, catches obvious stuff instantly
         result = heuristic.scan(prompt)
         if result is not None:
             if result.confidence >= self.confidence_threshold:
                 self._log(f"layer 1 hit: {result.attack_type.value}")
                 return result
-            # low confidence heuristic hit - still escalate to LLM
-            # but keep the heuristic indicators for context
             heuristic_indicators = result.indicators
         else:
             heuristic_indicators = []
 
+        # --- layer 2: embedding similarity ---
+        result = embedding.scan(prompt)
+        if result is not None:
+            self._log(f"layer 2 hit: {result.attack_type.value}, similarity={result.indicators[0]}")
+            if heuristic_indicators:
+                result.indicators = heuristic_indicators + result.indicators
+            return result
+
         if self.heuristic_only:
-            # caller explicitly said skip LLM - return clean
             return self._allow_clean(prompt)
 
         # --- layer 3: LLM classifier ---
-        # skipping layer 2 (embedding) for now - comes in phase 2
-        # calling it layer 3 to keep numbering consistent with architecture
         result = llm_classifier.scan(prompt, self.provider, self.model)
-
-        # merge heuristic indicators into LLM result for richer output
         if heuristic_indicators:
             result.indicators = heuristic_indicators + result.indicators
 
@@ -128,54 +113,38 @@ class Firewall:
 
 
 class SessionFirewall:
-    """
-    Wraps Firewall for multi-turn conversations.
-    Keeps a rolling window of recent messages and scores
-    intent drift - so attacks spread across turns get caught.
-    """
-
-    # how many recent turns to consider for drift detection
     WINDOW = 6
-
-    # if session accumulates this much suspicion, flag even clean-looking prompts
     SUSPICION_THRESHOLD = 2.0
 
     def __init__(self, firewall: Firewall):
         self.fw = firewall
         self._history: list[FirewallResult] = []
         self._suspicion_score = 0.0
-        self._tainted = False  # once tainted, session stays flagged
+        self._tainted = False
 
     def scan(self, prompt: str) -> FirewallResult:
         result = self.fw.scan(prompt)
 
-        # accumulate suspicion even for allowed prompts
-        # a bunch of borderline messages in a row is itself a signal
         if result.is_blocked:
             self._suspicion_score += result.confidence * 2
             self._tainted = True
         elif result.confidence > 0.3 and result.attack_type != AttackType.SAFE:
-            # low confidence hit - not blocked but adds suspicion
             self._suspicion_score += result.confidence * 0.5
 
-        # decay suspicion over time - old messages matter less
         self._suspicion_score = max(0.0, self._suspicion_score - 0.1)
 
-        # flag result if session is tainted even if this message looks clean
         if self._tainted or self._suspicion_score >= self.SUSPICION_THRESHOLD:
             result.session_flagged = True
             if result.verdict == "ALLOWED" and self._tainted:
                 result.explanation += " [session flagged: prior injection attempt detected]"
 
         self._history.append(result)
-        # keep window small
         if len(self._history) > self.WINDOW:
             self._history.pop(0)
 
         return result
 
     def reset(self):
-        """start fresh - call this when a new conversation begins"""
         self._history.clear()
         self._suspicion_score = 0.0
         self._tainted = False
