@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "promptwall"
-version = "0.1.0"
+version = "0.3.0"
 authors = [     {name = "A73r0id", email = "choubeyhimanshu719@email.com"} ]
 description = "LLM prompt injection firewall with session tracking, explainability and multilingual detection"
 readme = "README.md"
