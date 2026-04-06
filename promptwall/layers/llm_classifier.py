@@ -102,28 +102,26 @@ def _anthropic(prompt: str, model: str) -> str:
 
 
 def _local(prompt: str, model: str | None) -> str:
-    """
-    Ollama-based local inference - for when you don't want to send
-    user data to external APIs. needs ollama running on localhost.
-    """
     try:
         import requests
     except ImportError:
         raise ImportError("pip install requests")
 
-    model = model or "llama3"
+    model = model or "llama3.2"
     resp = requests.post(
-        "http://localhost:11434/api/generate",
+        "http://localhost:11434/api/chat",  # changed from /api/generate
         json={
             "model": model,
-            "prompt": f"{_SYSTEM}\n\nAnalyze this prompt:\n{prompt}",
+            "messages": [
+                {"role": "system", "content": _SYSTEM},
+                {"role": "user", "content": prompt}
+            ],
             "stream": False,
         },
-        timeout=30,
+        timeout=60,
     )
     resp.raise_for_status()
-    return resp.json().get("response", "{}")
-
+    return resp.json().get("message", {}).get("content", "{}")
 
 def _parse_response(raw: str, original_prompt: str) -> FirewallResult:
     # strip markdown fences if the model got chatty despite instructions

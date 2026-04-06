@@ -14,27 +14,29 @@ class Firewall:
         print(result)
     """
 
-    def __init__(
-        self,
-        provider: str = "openai",
-        model: str = None,
-        heuristic_only: bool = False,
-        confidence_threshold: float = 0.5,
-        verbose: bool = False,
-    ):
-        self.provider = provider
-        self.model = model
-        self.heuristic_only = heuristic_only
-        self.confidence_threshold = confidence_threshold
-        self.verbose = verbose
+def __init__(
+    self,
+    provider: str = "openai",
+    model: str = None,
+    heuristic_only: bool = False,
+    use_llm: bool = True,          # new flag — set False to skip L3 entirely
+    confidence_threshold: float = 0.5,
+    verbose: bool = False,
+):
+    self.provider = provider
+    self.model = model
+    self.heuristic_only = heuristic_only
+    self.use_llm = use_llm
+    self.confidence_threshold = confidence_threshold
+    self.verbose = verbose
 
-        self._stats = {
-            "total": 0,
-            "blocked": 0,
-            "allowed": 0,
-            "layer_hits": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
-        }
-
+    self._stats = {
+        "total": 0,
+        "blocked": 0,
+        "allowed": 0,
+        "layer_hits": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+    }
+    
     def scan(self, prompt: str) -> FirewallResult:
         if not prompt or not prompt.strip():
             return self._allow_clean(prompt)
@@ -52,36 +54,40 @@ class Firewall:
     def session(self) -> "SessionFirewall":
         return SessionFirewall(self)
 
-    def _run_layers(self, prompt: str) -> FirewallResult:
-        # --- layer 1: heuristic ---
-        result = heuristic.scan(prompt)
-        if result is not None:
-            if result.confidence >= self.confidence_threshold:
-                self._log(f"layer 1 hit: {result.attack_type.value}")
-                return result
-            heuristic_indicators = result.indicators
-        else:
-            heuristic_indicators = []
-
-        # --- layer 2: embedding similarity ---
-        result = embedding.scan(prompt)
-        if result is not None:
-            self._log(f"layer 2 hit: {result.attack_type.value}, similarity={result.indicators[0]}")
-            if heuristic_indicators:
-                result.indicators = heuristic_indicators + result.indicators
+ def _run_layers(self, prompt: str) -> FirewallResult:
+    # --- layer 1: heuristic ---
+    result = heuristic.scan(prompt)
+    if result is not None:
+        if result.confidence >= self.confidence_threshold:
+            self._log(f"layer 1 hit: {result.attack_type.value}")
             return result
+        heuristic_indicators = result.indicators
+    else:
+        heuristic_indicators = []
 
-        if self.heuristic_only:
-            return self._allow_clean(prompt)
+    if self.heuristic_only:
+        return self._allow_clean(prompt)
 
-        # --- layer 3: LLM classifier ---
-        result = llm_classifier.scan(prompt, self.provider, self.model)
+    # --- layer 2: embedding similarity ---
+    result = embedding.scan(prompt)
+    if result is not None:
+        self._log(f"layer 2 hit: {result.attack_type.value}")
         if heuristic_indicators:
             result.indicators = heuristic_indicators + result.indicators
-
-        self._log(f"layer 3 hit: {result.attack_type.value}, confidence={result.confidence:.0%}")
         return result
 
+    # --- layer 3: LLM classifier ---
+    # skipped if use_llm=False — recommended for production
+    if not self.use_llm:
+        self._log("L3 skipped (use_llm=False) — passing as allowed")
+        return self._allow_clean(prompt)
+
+    result = llm_classifier.scan(prompt, self.provider, self.model)
+    if heuristic_indicators:
+        result.indicators = heuristic_indicators + result.indicators
+
+    self._log(f"layer 3 hit: {result.attack_type.value}, confidence={result.confidence:.0%}")
+    return result
     def _allow_clean(self, prompt: str) -> FirewallResult:
         return FirewallResult(
             verdict="ALLOWED",
